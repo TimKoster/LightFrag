@@ -1,0 +1,64 @@
+<May07-2024> <16:32:33>  AMS 2023.101  RunTime: May07-2024 16:32:33  ShM Nodes: 8  Procs: 192
+<May07-2024> <16:32:40>  BAND 2023.101  RunTime: May07-2024 16:32:40  ShM Nodes: 8  Procs: 192
+<May07-2024> <16:32:51>  All basis functions smoothly confined at radius: 20.0
+<May07-2024> <16:32:53>  FRAGMENTS USED
+<May07-2024> <16:32:53>  >>>> RADIAL
+<May07-2024> <16:33:39>  >>>> POINTS
+<May07-2024> <16:41:55>  >>>> KPNT
+<May07-2024> <16:42:09>  >>>> CELLS
+<May07-2024> <16:42:15>  >>>> NUMGRD
+<May07-2024> <16:42:17>  >>>> ELSTAT
+<May07-2024> <16:42:21>  >>>> ATMFNC
+<May07-2024> <16:43:48>  >>>> PREPAREBAS
+<May07-2024> <16:45:09>  ------ K .. 1
+<May07-2024> <16:46:03>  >>>> PREPAREHAM
+<May07-2024> <16:46:33>  ------ K .. 1
+<May07-2024> <16:46:57>  >>>> PREPAREFIT
+<May07-2024> <16:48:21>  calling scf
+<May07-2024> <16:51:19>  start of SCF loop
+<May07-2024> <16:54:50>  initial density from psi
+<May07-2024> <17:26:14>  cyc=  0 err=0.00E+00 cpu=  23m ela=  31m
+<May07-2024> <17:36:02>  forgetting previous densities...
+<May07-2024> <17:37:55>  cyc=  1 err=3.74E+00 meth=o nvec= 1 mix=1.0000 cpu=  10m ela=  12m fit=2.26E-02 E=    -652.97 (eV) pol= 2.00E+00
+<May07-2024> <17:47:17>  cyc=  2 err=2.44E-01 meth=1 nvec= 1 mix=0.1500 cpu= 463s ela= 562s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <17:57:40>  cyc=  3 err=2.52E-01 meth=1 nvec= 2 mix=0.1950 cpu= 504s ela=  10m fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <18:07:05>  cyc=  4 err=1.34E-01 meth=1 nvec= 3 mix=0.2009 cpu= 463s ela= 565s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <18:17:06>  cyc=  5 err=7.39E-02 meth=1 nvec= 4 mix=0.2069 cpu= 505s ela=  10m fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <18:25:45>  cyc=  6 err=5.79E-02 meth=1 nvec= 5 mix=0.2131 cpu= 386s ela= 519s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <18:33:22>  cyc=  7 err=2.70E-02 meth=1 nvec= 6 mix=0.2195 cpu= 298s ela= 457s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <18:39:03>  cyc=  8 err=2.15E-02 meth=1 nvec= 7 mix=0.2261 cpu= 152s ela= 341s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <18:45:42>  cyc=  9 err=2.11E-02 meth=1 nvec= 8 mix=0.2328 cpu= 163s ela= 399s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <18:49:52>  cyc= 10 err=4.79E-03 meth=1 nvec= 9 mix=0.2398 cpu=  96s ela= 250s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <18:54:08>  cyc= 11 err=4.72E-03 meth=1 nvec=10 mix=0.2470 cpu= 112s ela= 256s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <18:58:04>  cyc= 12 err=3.24E-03 meth=1 nvec=11 mix=0.2544 cpu= 157s ela= 236s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:01:40>  HALFWAY
+<May07-2024> <19:01:55>  cyc= 13 err=8.89E-04 meth=1 nvec=12 mix=0.2621 cpu= 119s ela= 231s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:05:41>  cyc= 14 err=5.46E-04 meth=1 nvec=13 mix=0.2699 cpu=  88s ela= 226s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:10:02>  cyc= 15 err=1.05E-04 meth=1 nvec=14 mix=0.2780 cpu= 110s ela= 262s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:14:31>  cyc= 16 err=7.93E-05 meth=1 nvec=15 mix=0.2864 cpu= 115s ela= 268s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:18:35>  cyc= 17 err=3.82E-05 meth=1 nvec=16 mix=0.2950 cpu= 147s ela= 244s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:22:24>  cyc= 18 err=1.18E-05 meth=1 nvec=17 mix=0.3038 cpu= 115s ela= 229s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:25:44>  cyc= 19 err=1.04E-05 meth=1 nvec=18 mix=0.3129 cpu=  60s ela= 201s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:29:14>  cyc= 20 err=9.07E-06 meth=1 nvec=19 mix=0.3223 cpu=  55s ela= 210s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:31:43>  cyc= 21 err=5.34E-06 meth=1 nvec=20 mix=0.3320 cpu=  53s ela= 149s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:33:38>  cyc= 22 err=3.13E-06 meth=1 nvec=20 mix=0.3419 cpu=  49s ela= 115s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:35:29>  cyc= 23 err=1.25E-06 meth=1 nvec=19 mix=0.3522 cpu=  45s ela= 110s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:37:21>  cyc= 24 err=1.04E-06 meth=1 nvec=20 mix=0.3628 cpu=  41s ela= 112s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:39:15>  SCF CONVERGENCE
+<May07-2024> <19:39:30>  cyc= 25 err=4.00E-07 meth=1 nvec=19 mix=0.3736 cpu=  54s ela= 128s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:40:54>  rhopot:last
+<May07-2024> <19:41:25>  cyc= 26 err=4.00E-07 meth=m nvec= 1 mix=1.0000 cpu=  51s ela= 115s fit=2.26E-02 pol= 2.00E+00
+<May07-2024> <19:46:33>  ENERGY OF FORMATION:  -24.0956 A.U.
+<May07-2024> <19:46:33>                       -655.6737 E.V.
+<May07-2024> <19:46:33>                     -15120.1965 KCAL/MOL
+<May07-2024> <19:46:36>  >>>> CHARGE
+<May07-2024> <19:47:36>  >>>> HIRSH
+<May07-2024> <19:47:39>  >>>> CM5CHARGES
+<May07-2024> <19:47:41>  FERMI ENERGY:          -0.1599 A.U.
+<May07-2024> <19:47:41>                         -4.3515 E.V
+<May07-2024> <19:47:41>  Band gap:               0.0112 A.U.
+<May07-2024> <19:47:41>                          0.3050 E.V
+<May07-2024> <19:47:41>  >>>> DOS
+<May07-2024> <19:47:43>  Integrate over delta E
+<May07-2024> <19:47:58>  copy eigensystem
+<May07-2024> <19:54:18>  NORMAL TERMINATION
