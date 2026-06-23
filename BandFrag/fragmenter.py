@@ -1,9 +1,16 @@
-#!/scistor/tc/dtt741/BandFrag/venv/bin/python3.11
+#!/scistor/tc/dtt741/BandFrag/.venv/bin/python3.11
 
 import sys
 import subprocess
 import os
+from pathlib import Path
+import re
+import math
 
+graph_template_name = "template.ipynb"
+our_folder = Path(os.path.dirname(os.path.realpath(__file__)))
+
+# XYZ object with lattices for periodic structures
 class LatticeXyz(object):
     atoms = list()
     lattice_vectors = list()
@@ -11,6 +18,20 @@ class LatticeXyz(object):
     def __init__(self, atoms, lattice_vectors):
         self.atoms = atoms
         self.lattice_vectors = lattice_vectors
+
+class Results(object):
+    Pauli:float = 0
+    dispersion:float = 0
+    elstat:float = 0
+    orbital:float = 0
+    interaction:float = 0
+
+    def __init__(self, Pauli, dispersion, elstat, orbital, interaction):
+        self.Pauli = float(Pauli)
+        self.dispersion = float(dispersion)
+        self.elstat = float(elstat)
+        self.orbital = float(orbital)
+        self.interaction = float(interaction)
 
 # Read the fragment mapping, which can be 1,2,3-10, 17-20, 37 and convert it to a list of integers
 def read_fragment_mapping(fragment_mapping_string):
@@ -28,35 +49,40 @@ def read_fragment_mapping(fragment_mapping_string):
             fragment_mapping.append(number)
     return fragment_mapping
 
+# Holds which atoms belong to which fragment
 class FragmentMapping(object):
-    fragment_mapping_1 = None
-    fragment_mapping_2 = None
+    fragment_mapping_1: list[int] = None
+    fragment_mapping_2: list[int] = None
 
     def __init__(self, fragment_mapping_1, fragment_mapping_2):
         self.fragment_mapping_1 = read_fragment_mapping(fragment_mapping_1)
         self.fragment_mapping_2 = read_fragment_mapping(fragment_mapping_2)
 
+# Holds the info we obtain from the 'BandFrag' header of the input file
 class Configuration(object):
-    IRC_path = None
+    # Absolute path that leads to the IRC file
+    IRC_path:str = None
     fragment_mapping: FragmentMapping = None
 
-    strain_fragment_1 = 0
-    strain_fragment_2 = 0
+    strain_fragment_1:float = 0
+    strain_fragment_2:float = 0
 
-    bond_length_atom_1 = 0
-    bond_length_atom_2 = 0
+    bond_length_atom_1:int = 0
+    bond_length_atom_2:int = 0
 
-    bond_length = 0
+    # This is really only for making a nice graph
+    bond_length:float = 0
 
     def __init__(self, IRC_path, fragment_mapping, strain_fragment_1, strain_fragment_2, bond_length_atom_1, bond_length_atom_2, bond_length):
         self.IRC_path = IRC_path
         self.fragment_mapping = fragment_mapping
-        self.strain_fragment_1 = strain_fragment_1
-        self.strain_fragment_2 = strain_fragment_2
-        self.bond_length_atom_1 = bond_length_atom_1
-        self.bond_length_atom_2 = bond_length_atom_2
-        self.bond_length = bond_length
+        self.strain_fragment_1 = float(strain_fragment_1)
+        self.strain_fragment_2 = float(strain_fragment_2)
+        self.bond_length_atom_1 = int(bond_length_atom_1)
+        self.bond_length_atom_2 = int(bond_length_atom_2)
+        self.bond_length = float(bond_length)
 
+# Read the the configuration header from the input file and put it in an object for easy access
 def read_configuration(data, calculation_folder):
     start = "BandFrag"
     end = "End"
@@ -70,21 +96,24 @@ def read_configuration(data, calculation_folder):
     strain_fragment_1 = read_parameter(config_list, "strain_fragment_1", 1)
     strain_fragment_2 = read_parameter(config_list, "strain_fragment_2", 1)
 
-    bond_length_atom_1, bond_length_atom_2, bond_length = read_parameter(config_list, "bond_length", 3) 
+    bond_length_atom_1, bond_length_atom_2, bond_length = read_parameter(config_list, "bond_length", 3)
 
     fragment_mapping = FragmentMapping(fragment_mapping_1, fragment_mapping_2)
 
     return Configuration(calculation_folder + "/" + IRC_path, fragment_mapping, strain_fragment_1, strain_fragment_2, bond_length_atom_1, bond_length_atom_2, bond_length)
 
+# Read a parameter from the config
 def read_parameter(config_list, parameter_name, parameter_count):
     if parameter_name in config_list:
         return_values = []
         for i in range(parameter_count):
-            return_values.append(config_list[config_list.index(parameter_name)+1+i].rstrip())
+            return_values.append(config_list[config_list.index(parameter_name) + 1 + i].rstrip())
         return return_values if len(return_values) > 1 else return_values[0]
     else:
         return None
-    
+
+# Read an .ams.amv file with multiple .xyz frames (or one, I cant stop you), which is typically obtained
+# from an IRC 
 def get_xyz_list(IRC_path):
     with open(IRC_path, "r") as file:
         data = file.read()
@@ -92,6 +121,7 @@ def get_xyz_list(IRC_path):
     xyz_list: list[LatticeXyz] = list()
 
     # Every frame starts with this, lets hope they dont change that ;_;
+    # TODO: find some other way to do this, I hate this
     header = "Geometry"
     data_list = data.split("\n")
     frames = list()
@@ -109,6 +139,7 @@ def get_xyz_list(IRC_path):
         for line in data_list[frame_index:]:
             arguments = line.split(" ")
             # Empty line, we hit. Go to next frame, we must
+            # TODO: so if there's no empty line at the end of the file we just ignore it ughh
             if len(arguments) < 2:
                 xyz_list.append(LatticeXyz(atom_coordinates, lattice_vectors))
                 break
@@ -124,6 +155,7 @@ def get_xyz_list(IRC_path):
 
     return xyz_list
 
+# Get the ams script part of the input file (which we get from the <<eor> ... eor in bash)
 def scrape_template_script(data: str):
     # This is always the same and at the top I don't care to scrape it manually
     bin_bash = "#!/bin/bash\n"
@@ -134,10 +166,12 @@ def scrape_template_script(data: str):
 # Generate the fragments atoms from the mapping
 def generate_atoms_from_mapping(fragment_mapping_1: list[int], xyz: LatticeXyz):
     mapped_atoms_string = ""
+    # this makes ams happy 
+    decimals = 8
 
     for num in fragment_mapping_1:
         num -= 1 # The mapping is 1 indexed, but our list is 0 indexed
-        mapped_atoms_string += f"{xyz.atoms[num][0]} {round(xyz.atoms[num][1], 8)} {round(xyz.atoms[num][2], 8)} {round(xyz.atoms[num][3], 8)}\n"
+        mapped_atoms_string += f"{xyz.atoms[num][0]} {round(xyz.atoms[num][1], decimals)} {round(xyz.atoms[num][2], decimals)} {round(xyz.atoms[num][3], decimals)}\n"
     
     return mapped_atoms_string.rstrip()
 
@@ -156,6 +190,7 @@ def generate_atom_mappings(fragment_mapping: FragmentMapping, xyz: LatticeXyz):
 
     return atom_mapping_1.rstrip(), atom_mapping_2.rstrip()
 
+# Get the data input, clean it into a nice template bash file, and generate a bash file for every .xyz coordinate
 def build_bash_scripts(data, configuration: Configuration, xyz_list: list[LatticeXyz]):
     bash_scripts = list()
 
@@ -200,7 +235,11 @@ def build_bash_scripts(data, configuration: Configuration, xyz_list: list[Lattic
         bash_scripts.append(bash_script)
     return bash_scripts
 
+# Run all the bash scripts we made in .ams (and be so fucking careful you only use this when you're slurming, 
+# or you absolutely murder a login/interactive node)
 def run_bash_scripts(bash_scripts: list[str], calculation_folder):
+    frame_folders = list()
+
     for i in range(len(bash_scripts)):
         script_folder = f"{calculation_folder}/scripts"
         frame_name = f"frame_{i}"
@@ -210,20 +249,104 @@ def run_bash_scripts(bash_scripts: list[str], calculation_folder):
         with open(script_path, "w") as file:
             file.write(bash_scripts[i].replace("FRAME_DIR", frame_name))
         
-        os.makedirs(f"{calculation_folder}/{frame_name}", exist_ok = True)
+        frame_folder = f"{calculation_folder}/{frame_name}"
+        os.makedirs(frame_folder, exist_ok = True)
+        frame_folders.append(frame_folder)
 
         print(f"Running fragment_{i}.sh")
         
+        # Make sure to comment out if you're testing on local
+        # It's probably fine because the .ams installation is hard to access by accident without slurm
+        # But it still makes me reeeeallly nervous
         subprocess.run(["bash", script_path])
+    
+    return frame_folders
 
+def scrape_results(frame_folders: list[str]):
+    results = list()
+    for path in frame_folders:
+        with open(f"{path}/fragment_full.out", 'r') as file:
+            data = file.read()
+
+            # The stuff we need looks something like this
+            # Let's hope they never even slightly change how they format this...
+            # E_Pauli | 2.05330 55.873 1288.47 5391.0
+            # E_disp | -0.00437 -0.119 -2.74 -11.5
+            # E_elstat | -0.43276 -11.776 -271.56 -1136.2
+            # E_orb | -2.36459 -64.344 -1483.80 -6208.2
+            # E_int | -0.74841 -20.365 -469.64 -1965.0
+
+            pattern = r'^\s*(E_(?:Pauli|disp|elstat|orb|int))\s*\|.*?\s+(-?\d+(?:\.\d+)?)\s*$'
+
+            energies = dict(re.findall(pattern, data, re.MULTILINE))
+
+            result:Results = Results(energies["E_Pauli"], energies["E_disp"], energies["E_elstat"], energies["E_orb"], energies["E_int"])
+            results.append(result)
+
+    return results
+
+def print_results(results: list[Results], configuration:Configuration, xyz_list:list[LatticeXyz], destination:str):
+    distances = list()
+    for result in results:
+        index = results.index(result)
+
+        xyz_lattice = xyz_list[index]
+        # these are lists of ['C', 0.11, 2.22, 1.11]
+        atom_1 = xyz_lattice.atoms[configuration.bond_length_atom_1]
+        atom_2 = xyz_lattice.atoms[configuration.bond_length_atom_2]
+
+        distances.append(math.sqrt((atom_2[1] - atom_1[1])**2 + (atom_2[2] - atom_1[1])**2 + (atom_2[3] - atom_1[1])**2))
+
+        print(f"""
+        Frame_{index}:
+            Pauli: {result.Pauli}kcal/mol, 
+            Disp: {result.dispersion}kcal/mol, 
+            Elstat: {result.elstat}kcal/mol,
+            Orbital: {result.orbital}kcal/mol,
+            Interaction: {result.interaction}kcal/mol,
+        Distance: {distances}        
+        """)
+
+    template = ""
+    for path in our_folder.glob(graph_template_name):
+        with open(path, 'r') as template:
+            template = template.read()
+        break
+
+    template = template.replace("X_AXIS", str(distances))
+    template = template.replace("Y_AXIS_PAULI", str([result.Pauli for result in results]))
+    template = template.replace("Y_AXIS_DISPERSION", str([result.dispersion for result in results]))
+    template = template.replace("Y_AXIS_ELSTAT", str([result.elstat for result in results]))
+    template = template.replace("Y_AXIS_ORBITAL", str([result.orbital for result in results]))
+    template = template.replace("Y_AXIS_INTERACTION", str([result.interaction for result in results]))
+
+    with open(f"{destination}/{graph_template_name}", 'w') as jupyter_notebook:
+        jupyter_notebook.write(template)
+        print("Written results to", jupyter_notebook)
+
+### The main code execution part
+
+# Grab all the data from the <<eor> ... eor in the input file
 data = sys.stdin.read()
 
+# Get the calculation/slurm submit folder (the one where the input file is in, which slurm gives to our input file)
 calculation_folder = sys.argv[1]
 
+# Read the BandFrag configuration header so we can define how to behave
 configuration: Configuration = read_configuration(data, calculation_folder)
 
+# Turn the .amv into a list of xyz_lattice objects
 xyz_list = get_xyz_list(configuration.IRC_path)
 
+# Build the bash scripts from the input file, config and the list of xyz_lattice frames we need to do
 bash_scripts = build_bash_scripts(data, configuration, xyz_list)
 
-run_bash_scripts(bash_scripts, calculation_folder)
+# Run the scripts we constructed in ams
+frame_folders = run_bash_scripts(bash_scripts, calculation_folder)
+
+# frame_folders = ["/scistor/tc/dtt741/BandFrags/frame_0"]
+
+results: list[Results] = scrape_results(frame_folders)
+
+# Print the results to something so a human can view it (jupy? print? excel?)
+print_results(results, configuration, xyz_list, calculation_folder)
