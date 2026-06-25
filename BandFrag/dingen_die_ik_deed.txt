@@ -1,6 +1,6 @@
-python3.11 -m venv BandFrag/.venv/
-pip install jupyter
-kut aids ding wil per se dat ik een tweede .venv maak
-pip install matplotlib
+python3.11 -m venv BandFrag/venv/
+source BandFrag/venv/bin/activate
+pip install pandas
+deactivate
 
 chmod 755 BandFrag/fragmenter.py 

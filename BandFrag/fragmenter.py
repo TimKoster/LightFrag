@@ -1,4 +1,4 @@
-#!/scistor/tc/dtt741/BandFrag/.venv/bin/python3.11
+#!/scistor/tc/dtt741/BandFrag/venv/bin/python3.11
 
 import sys
 import subprocess
@@ -6,6 +6,9 @@ import os
 from pathlib import Path
 import re
 import math
+import pandas as pd
+
+# TODO: Zorg ervoor dat de graph delta afstand, energie etc weergeeft. Was dat een beetje vergeten
 
 graph_template_name = "template.ipynb"
 our_folder = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -26,12 +29,18 @@ class Results(object):
     orbital:float = 0
     interaction:float = 0
 
-    def __init__(self, Pauli, dispersion, elstat, orbital, interaction):
+    fragment_1_energy:float = 0
+    fragment_2_energy:float = 0
+
+    def __init__(self, Pauli, dispersion, elstat, orbital, interaction, fragment_1_energy, fragment_2_energy):
         self.Pauli = float(Pauli)
         self.dispersion = float(dispersion)
         self.elstat = float(elstat)
         self.orbital = float(orbital)
         self.interaction = float(interaction)
+
+        self.fragment_1_energy = float(fragment_1_energy)
+        self.fragment_2_energy = float(fragment_2_energy)
 
 # Read the fragment mapping, which can be 1,2,3-10, 17-20, 37 and convert it to a list of integers
 def read_fragment_mapping(fragment_mapping_string):
@@ -78,8 +87,9 @@ class Configuration(object):
         self.fragment_mapping = fragment_mapping
         self.strain_fragment_1 = float(strain_fragment_1)
         self.strain_fragment_2 = float(strain_fragment_2)
-        self.bond_length_atom_1 = int(bond_length_atom_1)
-        self.bond_length_atom_2 = int(bond_length_atom_2)
+        # These indexes are 1 based, and python is 0 based, so just take care of it here
+        self.bond_length_atom_1 = int(bond_length_atom_1) - 1
+        self.bond_length_atom_2 = int(bond_length_atom_2) - 1
         self.bond_length = float(bond_length)
 
 # Read the the configuration header from the input file and put it in an object for easy access
@@ -265,8 +275,8 @@ def run_bash_scripts(bash_scripts: list[str], calculation_folder):
 def scrape_results(frame_folders: list[str]):
     results = list()
     for path in frame_folders:
-        with open(f"{path}/fragment_full.out", 'r') as file:
-            data = file.read()
+        with open(f"{path}/fragment_full.out", 'r') as file_full:
+            data_full = file_full.read()
 
             # The stuff we need looks something like this
             # Let's hope they never even slightly change how they format this...
@@ -278,9 +288,28 @@ def scrape_results(frame_folders: list[str]):
 
             pattern = r'^\s*(E_(?:Pauli|disp|elstat|orb|int))\s*\|.*?\s+(-?\d+(?:\.\d+)?)\s*$'
 
-            energies = dict(re.findall(pattern, data, re.MULTILINE))
+            energies = dict(re.findall(pattern, data_full, re.MULTILINE))
+            fragment_energies = list()
 
-            result:Results = Results(energies["E_Pauli"], energies["E_disp"], energies["E_elstat"], energies["E_orb"], energies["E_int"])
+            # Grab the fragment energies
+            for log_file in ["fragment_1.log", "fragment_2.log"]:
+                with open(f"{path}/{log_file}", 'r') as file_fragment:
+                    data_fragment = file_fragment.read()
+
+                    m = list(re.finditer(r"ENERGY OF FORMATION", data_fragment))[-1]
+                    subtext = data_fragment[m.end():]
+                    if len(subtext) > 0:
+                        m2 = re.search(r"([-+]?[0-9]*\.?[0-9]+)\s*KCAL/MOL", subtext, flags=re.IGNORECASE)
+                        fragment_energies.append(float(m2.group(1)))
+
+            result:Results = Results(energies["E_Pauli"], 
+                                    energies["E_disp"], 
+                                    energies["E_elstat"], 
+                                    energies["E_orb"], 
+                                    energies["E_int"], 
+                                    round(fragment_energies[0] - configuration.strain_fragment_1, 4), 
+                                    round(fragment_energies[1] - configuration.strain_fragment_2, 4),
+                                )
             results.append(result)
 
     return results
@@ -289,24 +318,19 @@ def print_results(results: list[Results], configuration:Configuration, xyz_list:
     distances = list()
     for result in results:
         index = results.index(result)
-
         xyz_lattice = xyz_list[index]
+
         # these are lists of ['C', 0.11, 2.22, 1.11]
         atom_1 = xyz_lattice.atoms[configuration.bond_length_atom_1]
         atom_2 = xyz_lattice.atoms[configuration.bond_length_atom_2]
+        # sqrt((x2 - x1)^2 + (y2 - y1)^2 ...) - TS bond length
+        distances.append(round(math.sqrt((atom_2[1] - atom_1[1])**2 + (atom_2[2] - atom_1[2])**2 + (atom_2[3] - atom_1[3])**2) - configuration.bond_length, 4))
 
-        distances.append(math.sqrt((atom_2[1] - atom_1[1])**2 + (atom_2[2] - atom_1[1])**2 + (atom_2[3] - atom_1[1])**2))
 
-        print(f"""
-        Frame_{index}:
-            Pauli: {result.Pauli}kcal/mol, 
-            Disp: {result.dispersion}kcal/mol, 
-            Elstat: {result.elstat}kcal/mol,
-            Orbital: {result.orbital}kcal/mol,
-            Interaction: {result.interaction}kcal/mol,
-        Distance: {distances}        
-        """)
+    write_to_notebook(results, configuration, xyz_list, destination, distances)
+    write_to_output(results, configuration, xyz_list, destination, distances)
 
+def write_to_notebook(results: list[Results], configuration:Configuration, xyz_list:list[LatticeXyz], destination:str, distances):
     template = ""
     for path in our_folder.glob(graph_template_name):
         with open(path, 'r') as template:
@@ -320,9 +344,52 @@ def print_results(results: list[Results], configuration:Configuration, xyz_list:
     template = template.replace("Y_AXIS_ORBITAL", str([result.orbital for result in results]))
     template = template.replace("Y_AXIS_INTERACTION", str([result.interaction for result in results]))
 
+    template = template.replace("Y_AXIS_FRAGMENT_1", str([result.fragment_1_energy for result in results]))
+    template = template.replace("Y_AXIS_FRAGMENT_2", str([result.fragment_2_energy for result in results]))
+
+    # So we can get a nice "X-Y" label on the graph
+    template = template.replace("LABEL_BONDS", f"{xyz_list[0].atoms[configuration.bond_length_atom_1][0]}—{xyz_list[0].atoms[configuration.bond_length_atom_2][0]}")
+
     with open(f"{destination}/{graph_template_name}", 'w') as jupyter_notebook:
         jupyter_notebook.write(template)
         print("Written results to", jupyter_notebook)
+
+def write_to_output(results: list[Results], configuration:Configuration, xyz_list:list[LatticeXyz], destination:str, distances):
+    info = list()
+
+    for result in results:
+        info.append([
+            results.index(result),
+            distances[results.index(result)],
+            result.fragment_1_energy,
+            result.fragment_2_energy,
+            result.Pauli,
+            result.dispersion,
+            result.elstat,
+            result.orbital,
+            result.interaction,
+        ])
+
+
+    table = pd.DataFrame(info, columns = [
+        "FRAME", 
+        "DISTANCE",
+        "STRAIN_FRAGMENT_1", 
+        "STRAIN_FRAGMENT_2", 
+        "PAULI", 
+        "DISP", 
+        "ELSTAT", 
+        "ORBITAL", 
+        "INTERACTION",
+        ])
+
+    pd.set_option('display.max_colwidth', None)
+    pd.set_option('display.max_columns', None)
+
+    table.to_csv(f"{destination}/results.csv")
+    print("Written to results.csv")
+
+    print(table)
 
 ### The main code execution part
 
@@ -339,12 +406,12 @@ configuration: Configuration = read_configuration(data, calculation_folder)
 xyz_list = get_xyz_list(configuration.IRC_path)
 
 # Build the bash scripts from the input file, config and the list of xyz_lattice frames we need to do
-bash_scripts = build_bash_scripts(data, configuration, xyz_list)
+# bash_scripts = build_bash_scripts(data, configuration, xyz_list)
 
 # Run the scripts we constructed in ams
-frame_folders = run_bash_scripts(bash_scripts, calculation_folder)
+# frame_folders = run_bash_scripts(bash_scripts, calculation_folder)
 
-# frame_folders = ["/scistor/tc/dtt741/BandFrags/frame_0"]
+frame_folders = [f"/scistor/tc/dtt741/BandFrags/chlorobenzene/Pd_Pyrr_4NDG/Backward/frame_{i}" for i in range(0, 40)]
 
 results: list[Results] = scrape_results(frame_folders)
 
