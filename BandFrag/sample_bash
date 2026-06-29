@@ -28,14 +28,14 @@ FRAGMENT_FULL_NAME="fragment_full"
 $BANDFRAG_DIRECTORY/fragmenter.py $SLURM_SUBMIT_DIR <<eor>$SLURM_SUBMIT_DIR/$SLURM_JOB_NAME.out
 
 BandFrag
-    IRC_path IRC_Backward.ams.amv
-    strain_fragment_1 5.056
-    strain_fragment_2 2.05677
+    IRC_path IRC_Forward.ams.amv
+    strain_fragment_1 -19457.325
+    strain_fragment_2 -1707.01
 
-    fragment_mapping_1 1-80
-    fragment_mapping_2 81-84
+    fragment_mapping_1 1-93
+    fragment_mapping_2 94-105
 
-    bond_length 67 69 1.2
+    bond_length 94 95 1.7531
 End
 
 AMS_JOBNAME=$FRAGMENT_1_NAME $AMSBIN/ams <<eor>$SLURM_SUBMIT_DIR/FRAME_DIR/$FRAGMENT_1_NAME.out
@@ -67,7 +67,7 @@ Engine BAND
     
     kspace
         Type regular
-        Quality GammaOnly
+        Quality Good
     End
 
     XC
@@ -115,7 +115,7 @@ Engine BAND
     
     kspace
         Type regular
-        Quality GammaOnly
+        Quality Good
     End
 
     XC
@@ -163,7 +163,7 @@ Engine BAND
     
     kspace
         Type regular
-        Quality GammaOnly
+        Quality Good
     End
 
     XC

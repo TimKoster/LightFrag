@@ -1,5 +1,4 @@
 #!/scistor/tc/dtt741/BandFrag/venv/bin/python3.11
-
 import sys
 import subprocess
 import os
@@ -8,9 +7,21 @@ import re
 import math
 import pandas as pd
 
-# TODO: Zorg ervoor dat de graph delta afstand, energie etc weergeeft. Was dat een beetje vergeten
+# The fragmenter has 3 parts:
+# 1. Create bash files
+# We read the configuration in the BandFrag input file, read the molecules we should fragment from the .ams.amv mxyz movie file, and then we copy
+# the ams run file from the BandFrag input and copy that for every structure in the movie file and replace placeholders with our molecule, taking into account the BandFrag config
+# You can track this in the scripts/ folder that is generated when it runs
+# 2. Run bash files
+# All the bash files we created from the input, we now just run in order
+# After every completed frame we move folders and results around to keep things organized (technically this is done in the bash script)
+# 3. Scrape and print results
+# Now that everything has been calculated and organized, just read it all out and put it in a .ipynb for graphs and a .csv for raw results
 
 graph_template_name = "template.ipynb"
+graph_template_name_destination = "graphs.ipynb"
+raw_results_name_destination = "results.csv"
+
 our_folder = Path(os.path.dirname(os.path.realpath(__file__)))
 
 # XYZ object with lattices for periodic structures
@@ -272,7 +283,7 @@ def run_bash_scripts(bash_scripts: list[str], calculation_folder):
     
     return frame_folders
 
-def scrape_results(frame_folders: list[str]):
+def scrape_results(frame_folders: list[str]) -> list[Results]:
     results = list()
     for path in frame_folders:
         with open(f"{path}/fragment_full.out", 'r') as file_full:
@@ -350,9 +361,9 @@ def write_to_notebook(results: list[Results], configuration:Configuration, xyz_l
     # So we can get a nice "X-Y" label on the graph
     template = template.replace("LABEL_BONDS", f"{xyz_list[0].atoms[configuration.bond_length_atom_1][0]}—{xyz_list[0].atoms[configuration.bond_length_atom_2][0]}")
 
-    with open(f"{destination}/{graph_template_name}", 'w') as jupyter_notebook:
+    with open(f"{destination}/{graph_template_name_destination}", 'w') as jupyter_notebook:
         jupyter_notebook.write(template)
-        print("Written results to", jupyter_notebook)
+        print("Written results to", jupyter_notebook.name)
 
 def write_to_output(results: list[Results], configuration:Configuration, xyz_list:list[LatticeXyz], destination:str, distances):
     info = list()
@@ -386,7 +397,7 @@ def write_to_output(results: list[Results], configuration:Configuration, xyz_lis
     pd.set_option('display.max_colwidth', None)
     pd.set_option('display.max_columns', None)
 
-    table.to_csv(f"{destination}/results.csv")
+    table.to_csv(f"{destination}/{raw_results_name_destination}")
     print("Written to results.csv")
 
     print(table)
@@ -406,14 +417,14 @@ configuration: Configuration = read_configuration(data, calculation_folder)
 xyz_list = get_xyz_list(configuration.IRC_path)
 
 # Build the bash scripts from the input file, config and the list of xyz_lattice frames we need to do
-# bash_scripts = build_bash_scripts(data, configuration, xyz_list)
+bash_scripts = build_bash_scripts(data, configuration, xyz_list)
 
 # Run the scripts we constructed in ams
-# frame_folders = run_bash_scripts(bash_scripts, calculation_folder)
+frame_folders = run_bash_scripts(bash_scripts, calculation_folder)
 
-frame_folders = [f"/scistor/tc/dtt741/BandFrags/chlorobenzene/Pd_Pyrr_4NDG/Backward/frame_{i}" for i in range(0, 40)]
+# frame_folders = [f"/scistor/tc/dtt741/BandFrags/chlorobenzene/Pd_Pyrr_4NDG/Backward/frame_{i}" for i in range(0, 3)]
 
-results: list[Results] = scrape_results(frame_folders)
+results = scrape_results(frame_folders)
 
 # Print the results to something so a human can view it (jupy? print? excel?)
 print_results(results, configuration, xyz_list, calculation_folder)
