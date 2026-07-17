@@ -291,13 +291,14 @@ def scrape_results(frame_folders: list[str]) -> list[Results]:
 
             # The stuff we need looks something like this
             # Let's hope they never even slightly change how they format this...
+            # term      au      eV     kcal/mol kj/mol
             # E_Pauli | 2.05330 55.873 1288.47 5391.0
             # E_disp | -0.00437 -0.119 -2.74 -11.5
             # E_elstat | -0.43276 -11.776 -271.56 -1136.2
             # E_orb | -2.36459 -64.344 -1483.80 -6208.2
             # E_int | -0.74841 -20.365 -469.64 -1965.0
-
-            pattern = r'^\s*(E_(?:Pauli|disp|elstat|orb|int))\s*\|.*?\s+(-?\d+(?:\.\d+)?)\s*$'
+            # yes of course I did this completely myself
+            pattern = r'^\s*(E_(?:Pauli|disp|elstat|orb|int))\s*\|\s*(?:\S+\s+){2}(-?\d+(?:\.\d+)?)\s+\S+\s*$'
 
             energies = dict(re.findall(pattern, data_full, re.MULTILINE))
             fragment_energies = list()
@@ -363,7 +364,7 @@ def write_to_notebook(results: list[Results], configuration:Configuration, xyz_l
 
     with open(f"{destination}/{graph_template_name_destination}", 'w') as jupyter_notebook:
         jupyter_notebook.write(template)
-        print("Written results to", jupyter_notebook.name)
+        print("Written results to", graph_template_name_destination)
 
 def write_to_output(results: list[Results], configuration:Configuration, xyz_list:list[LatticeXyz], destination:str, distances):
     info = list()
@@ -398,7 +399,7 @@ def write_to_output(results: list[Results], configuration:Configuration, xyz_lis
     pd.set_option('display.max_columns', None)
 
     table.to_csv(f"{destination}/{raw_results_name_destination}")
-    print("Written to results.csv")
+    print("Written to", raw_results_name_destination)
 
     print(table)
 
@@ -422,7 +423,7 @@ bash_scripts = build_bash_scripts(data, configuration, xyz_list)
 # Run the scripts we constructed in ams
 frame_folders = run_bash_scripts(bash_scripts, calculation_folder)
 
-# frame_folders = [f"/scistor/tc/dtt741/BandFrags/chlorobenzene/Pd_Pyrr_4NDG/Backward/frame_{i}" for i in range(0, 3)]
+# frame_folders = [f"/scistor/tc/dtt741/BandFrags/chlorobenzene/Pd_Pyrr_4NDG/Backward/frame_{i}" for i in range(0, 40 +1)]
 
 results = scrape_results(frame_folders)
 

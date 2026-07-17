@@ -193,8 +193,9 @@ FRAGMENT_2_ATOM_MAPPING
 EndEngine
 eoj
 
-cp $FRAGMENT_FULL_NAME.results/ams.rkf $SLURM_SUBMIT_DIR/FRAME_DIR/$FRAGMENT_FULL_NAME.ams.rkf
-cp $FRAGMENT_FULL_NAME.results/band.rkf $SLURM_SUBMIT_DIR/FRAME_DIR/$FRAGMENT_FULL_NAME.band.rkf
+# These can be incredibly large, and I do not recommend keeping these for every frame
+# cp $FRAGMENT_FULL_NAME.results/ams.rkf $SLURM_SUBMIT_DIR/FRAME_DIR/$FRAGMENT_FULL_NAME.ams.rkf
+# cp $FRAGMENT_FULL_NAME.results/band.rkf $SLURM_SUBMIT_DIR/FRAME_DIR/$FRAGMENT_FULL_NAME.band.rkf
 cp $FRAGMENT_FULL_NAME.results/ams.log $SLURM_SUBMIT_DIR/FRAME_DIR/$FRAGMENT_FULL_NAME.log
 
 rm -Rf $FRAGMENT_1_NAME.results $FRAGMENT_2_NAME.results $FRAGMENT_FULL_NAME.results
