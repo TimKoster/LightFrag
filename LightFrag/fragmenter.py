@@ -1,4 +1,3 @@
-#!/scistor/tc/dtt741/LightFrag/venv/bin/python3.11
 import sys
 import subprocess
 import os

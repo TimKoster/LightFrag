@@ -14,7 +14,7 @@ echo "== Node list: ${SLURM_NODELIST}"
 echo "== Submit dir. : ${SLURM_SUBMIT_DIR}"
 echo "== Scratch dir. : ${TMPDIR}"
 
-LIGHTFRAG_DIRECTORY=~/BandFrag
+LIGHTFRAG_DIRECTORY=~/LightFrag
 
 # Slurmless testing parameters
 # SLURM_JOB_NAME='jobtest'
@@ -25,7 +25,7 @@ FRAGMENT_1_NAME="fragment_1"
 FRAGMENT_2_NAME="fragment_2"
 FRAGMENT_FULL_NAME="fragment_full"
 
-$LIGHTFRAG_DIRECTORY/fragmenter.py $SLURM_SUBMIT_DIR <<eor>$SLURM_SUBMIT_DIR/$SLURM_JOB_NAME.out
+$LIGHTFRAG_DIRECTORY/venv/bin/python3.11 $LIGHTFRAG_DIRECTORY/fragmenter.py $SLURM_SUBMIT_DIR <<eor>$SLURM_SUBMIT_DIR/$SLURM_JOB_NAME.out
 
 LightFrag
     IRC_path IRC_Forward.ams.amv
