@@ -1,0 +1,6 @@
+python3.11 -m venv BandFrag/venv/
+source LightFrag/venv/bin/activate
+pip install pandas
+deactivate
+
+chmod 755 LightFrag/fragmenter.py 

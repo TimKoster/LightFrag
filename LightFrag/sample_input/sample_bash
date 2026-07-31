@@ -14,7 +14,7 @@ echo "== Node list: ${SLURM_NODELIST}"
 echo "== Submit dir. : ${SLURM_SUBMIT_DIR}"
 echo "== Scratch dir. : ${TMPDIR}"
 
-BANDFRAG_DIRECTORY=~/BandFrag
+LIGHTFRAG_DIRECTORY=~/BandFrag
 
 # Slurmless testing parameters
 # SLURM_JOB_NAME='jobtest'
@@ -25,9 +25,9 @@ FRAGMENT_1_NAME="fragment_1"
 FRAGMENT_2_NAME="fragment_2"
 FRAGMENT_FULL_NAME="fragment_full"
 
-$BANDFRAG_DIRECTORY/fragmenter.py $SLURM_SUBMIT_DIR <<eor>$SLURM_SUBMIT_DIR/$SLURM_JOB_NAME.out
+$LIGHTFRAG_DIRECTORY/fragmenter.py $SLURM_SUBMIT_DIR <<eor>$SLURM_SUBMIT_DIR/$SLURM_JOB_NAME.out
 
-BandFrag
+LightFrag
     IRC_path IRC_Forward.ams.amv
     strain_fragment_1 -19457.325
     strain_fragment_2 -1707.01

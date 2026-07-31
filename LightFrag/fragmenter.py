@@ -1,4 +1,4 @@
-#!/scistor/tc/dtt741/BandFrag/venv/bin/python3.11
+#!/scistor/tc/dtt741/LightFrag/venv/bin/python3.11
 import sys
 import subprocess
 import os
@@ -9,8 +9,8 @@ import pandas as pd
 
 # The fragmenter has 3 parts:
 # 1. Create bash files
-# We read the configuration in the BandFrag input file, read the molecules we should fragment from the .ams.amv mxyz movie file, and then we copy
-# the ams run file from the BandFrag input and copy that for every structure in the movie file and replace placeholders with our molecule, taking into account the BandFrag config
+# We read the configuration in the LightFrag input file, read the molecules we should fragment from the .ams.amv mxyz movie file, and then we copy
+# the ams run file from the LightFrag input and copy that for every structure in the movie file and replace placeholders with our molecule, taking into account the LightFrag config
 # You can track this in the scripts/ folder that is generated when it runs
 # 2. Run bash files
 # All the bash files we created from the input, we now just run in order
@@ -78,7 +78,7 @@ class FragmentMapping(object):
         self.fragment_mapping_1 = read_fragment_mapping(fragment_mapping_1)
         self.fragment_mapping_2 = read_fragment_mapping(fragment_mapping_2)
 
-# Holds the info we obtain from the 'BandFrag' header of the input file
+# Holds the info we obtain from the 'LightFrag' header of the input file
 class Configuration(object):
     # Absolute path that leads to the IRC file
     IRC_path:str = None
@@ -105,7 +105,7 @@ class Configuration(object):
 
 # Read the the configuration header from the input file and put it in an object for easy access
 def read_configuration(data, calculation_folder):
-    start = "BandFrag"
+    start = "LightFrag"
     end = "End"
     splice = (data.split(start))[1].split(end)[0]
     config_list = splice.split(" ")
@@ -411,7 +411,7 @@ data = sys.stdin.read()
 # Get the calculation/slurm submit folder (the one where the input file is in, which slurm gives to our input file)
 calculation_folder = sys.argv[1]
 
-# Read the BandFrag configuration header so we can define how to behave
+# Read the LightFrag configuration header so we can define how to behave
 configuration: Configuration = read_configuration(data, calculation_folder)
 
 # Turn the .amv into a list of xyz_lattice objects
