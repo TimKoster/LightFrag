@@ -28,7 +28,7 @@ class LatticeXyz(object):
     atoms = list()
     lattice_vectors = list()
 
-    def __init__(self, atoms, lattice_vectors):
+    def __init__(self, atoms, lattice_vectors = None):
         self.atoms = atoms
         self.lattice_vectors = lattice_vectors
 
@@ -163,12 +163,10 @@ def get_xyz_list(IRC_path):
             if len(arguments) < 2:
                 xyz_list.append(LatticeXyz(atom_coordinates, lattice_vectors))
                 break
-            elif arguments[0] == "VEC1":
+            # Vector definition
+            elif "VEC" in arguments[0]:
                 # VEC1 2.0 1.0 0.0
-                lattice_vectors["VEC1"] = [float(arguments[1]), float(arguments[2]), float(arguments[3])]
-            elif arguments[0] == "VEC2":
-                # VEC2 1.0 2.0 0.0
-                lattice_vectors["VEC2"] = [float(arguments[1]), float(arguments[2]), float(arguments[3])]
+                lattice_vectors[arguments[0]] = [float(arguments[1]), float(arguments[2]), float(arguments[3])]
             elif len(arguments) == 4:
                 # C 1.0 2.0 1.0
                 atom_coordinates.append([arguments[0], float(arguments[1]), float(arguments[2]), float(arguments[3])])
@@ -220,14 +218,16 @@ def build_bash_scripts(data, configuration: Configuration, xyz_list: list[Lattic
         bash_script = template_script
 
         # Lattices
-        lattices = (
-        f"{str(xyz_list[i].lattice_vectors['VEC1'][0])} {xyz_list[i].lattice_vectors['VEC1'][1]} {xyz_list[i].lattice_vectors['VEC1'][2]}\n"
-        f"{str(xyz_list[i].lattice_vectors['VEC2'][0])} {xyz_list[i].lattice_vectors['VEC2'][1]} {xyz_list[i].lattice_vectors['VEC2'][2]}"
-        )
-        # I'm not sure why I decided to even make these different
-        bash_script = bash_script.replace("FRAGMENT_1_LATTICES", lattices)
-        bash_script = bash_script.replace("FRAGMENT_2_LATTICES", lattices)
-        bash_script = bash_script.replace("FRAGMENT_FULL_LATTICE", lattices)
+        if xyz_list[i].lattice_vectors is not None:
+            lattices = (
+            f"{str(xyz_list[i].lattice_vectors['VEC1'][0])} {xyz_list[i].lattice_vectors['VEC1'][1]} {xyz_list[i].lattice_vectors['VEC1'][2]}\n"
+            f"{str(xyz_list[i].lattice_vectors['VEC2'][0])} {xyz_list[i].lattice_vectors['VEC2'][1]} {xyz_list[i].lattice_vectors['VEC2'][2]}"
+            )
+
+            # I'm not sure why I decided to even make these different, lattices probably never change during pEDA
+            bash_script = bash_script.replace("FRAGMENT_1_LATTICES", lattices)
+            bash_script = bash_script.replace("FRAGMENT_2_LATTICES", lattices)
+            bash_script = bash_script.replace("FRAGMENT_FULL_LATTICE", lattices)
 
         # Fragment_1_xyz
         atom_mapping_fragment_1 = generate_atoms_from_mapping(configuration.fragment_mapping.fragment_mapping_1, xyz_list[i])
