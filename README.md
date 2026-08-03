@@ -43,4 +43,9 @@ defined in the input file.
 After running every fragment for every frame, the script compiles all results, using the strain_fragment_1 and strain_fragment_2 energies as basis, plotted over the bond_length defined in the input file. 
 Running a LightFrag job also produces the following:
 * `scripts/`: Folder containing the scripts that were run for every frame
-* `frame_n`: For every frame, contains the ams output for the fragments. By default, these are pruned to only contain the ams.rkf and the ams.log for storage efficiency. 
+* `frame_n`: For every frame, contains the ams output for the fragments. By default, these are pruned to only contain the ams.rkf and the ams.log for storage efficiency.
+
+<img width="1810" height="865" alt="image" src="https://github.com/user-attachments/assets/e7c717ee-a5e1-4688-a448-a849cb5df3fe" />
+
+
+
