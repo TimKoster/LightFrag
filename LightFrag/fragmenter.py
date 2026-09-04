@@ -16,6 +16,7 @@ import pandas as pd
 # After every completed frame we move folders and results around to keep things organized (technically this is done in the bash script)
 # 3. Scrape and print results
 # Now that everything has been calculated and organized, just read it all out and put it in a .ipynb for graphs and a .csv for raw results
+# Note that, by default, *.rkf's are deleted to save on memory, so we're limited to log scraping
 
 graph_template_name = "template.ipynb"
 graph_template_name_destination = "graphs.ipynb"
@@ -91,8 +92,10 @@ class Configuration(object):
 
     # This is really only for making a nice graph
     bond_length:float = 0
+    # Don't run any scripts, just gather the config and existing results and regenerate the results
+    only_regenerate_results = False
 
-    def __init__(self, IRC_path, fragment_mapping, strain_fragment_1, strain_fragment_2, bond_length_atom_1, bond_length_atom_2, bond_length):
+    def __init__(self, IRC_path, fragment_mapping, strain_fragment_1, strain_fragment_2, bond_length_atom_1, bond_length_atom_2, bond_length, only_regenerate_results):
         self.IRC_path = IRC_path
         self.fragment_mapping = fragment_mapping
         self.strain_fragment_1 = float(strain_fragment_1)
@@ -101,6 +104,7 @@ class Configuration(object):
         self.bond_length_atom_1 = int(bond_length_atom_1) - 1
         self.bond_length_atom_2 = int(bond_length_atom_2) - 1
         self.bond_length = float(bond_length)
+        self.only_regenerate_results = only_regenerate_results if only_regenerate_results is not None else False
 
 # Read the the configuration header from the input file and put it in an object for easy access
 def read_configuration(data, calculation_folder):
@@ -116,14 +120,19 @@ def read_configuration(data, calculation_folder):
     strain_fragment_1 = read_parameter(config_list, "strain_fragment_1", 1)
     strain_fragment_2 = read_parameter(config_list, "strain_fragment_2", 1)
 
+    only_regenerate_results_value = read_parameter(config_list, "only_regenerate_results", 1)
+    only_regenerate_results = None
+    if only_regenerate_results_value is not None:
+        only_regenerate_results = True if only_regenerate_results_value.lower() == "true" else False
+
     bond_length_atom_1, bond_length_atom_2, bond_length = read_parameter(config_list, "bond_length", 3)
 
     fragment_mapping = FragmentMapping(fragment_mapping_1, fragment_mapping_2)
 
-    return Configuration(calculation_folder + "/" + IRC_path, fragment_mapping, strain_fragment_1, strain_fragment_2, bond_length_atom_1, bond_length_atom_2, bond_length)
+    return Configuration(calculation_folder + "/" + IRC_path, fragment_mapping, strain_fragment_1, strain_fragment_2, bond_length_atom_1, bond_length_atom_2, bond_length, only_regenerate_results)
 
 # Read a parameter from the config
-def read_parameter(config_list, parameter_name, parameter_count):
+def read_parameter(config_list, parameter_name, parameter_count) -> str|None:
     if parameter_name in config_list:
         return_values = []
         for i in range(parameter_count):
@@ -255,23 +264,30 @@ def build_bash_scripts(data, configuration: Configuration, xyz_list: list[Lattic
         bash_scripts.append(bash_script)
     return bash_scripts
 
+# Create the folder destinations that get populated in run_bash_scripts
+def generate_folder_destinations(bash_scripts: list[str], calculation_folder):
+
+    frame_folders = []
+    for i in range(len(bash_scripts)):
+        frame_name = f"frame_{i}"
+        frame_folder = f"{calculation_folder}/{frame_name}"
+        os.makedirs(frame_folder, exist_ok = True)
+        frame_folders.append(frame_folder)
+        
+    return frame_folders
+
 # Run all the bash scripts we made in .ams (and be so fucking careful you only use this when you're slurming, 
 # or you absolutely murder a login/interactive node)
+# i mean it should break and this never happened to me, BUT BE WARNED
 def run_bash_scripts(bash_scripts: list[str], calculation_folder):
-    frame_folders = list()
-
     for i in range(len(bash_scripts)):
         script_folder = f"{calculation_folder}/scripts"
         frame_name = f"frame_{i}"
         script_path = f"{script_folder}/{frame_name}.sh"
-
+        
         os.makedirs(script_folder, exist_ok = True)
         with open(script_path, "w") as file:
             file.write(bash_scripts[i].replace("FRAME_DIR", frame_name))
-        
-        frame_folder = f"{calculation_folder}/{frame_name}"
-        os.makedirs(frame_folder, exist_ok = True)
-        frame_folders.append(frame_folder)
 
         print(f"Running fragment_{i}.sh")
         
@@ -279,12 +295,12 @@ def run_bash_scripts(bash_scripts: list[str], calculation_folder):
         # It's probably fine because the .ams installation is hard to access by accident without slurm
         # But it still makes me reeeeallly nervous
         subprocess.run(["bash", script_path])
-    
-    return frame_folders
 
 def scrape_results(frame_folders: list[str]) -> list[Results]:
     results = list()
+    print(frame_folders)
     for path in frame_folders:
+        print("Path", path)
         with open(f"{path}/fragment_full.out", 'r') as file_full:
             data_full = file_full.read()
 
@@ -312,7 +328,7 @@ def scrape_results(frame_folders: list[str]) -> list[Results]:
                     if len(subtext) > 0:
                         m2 = re.search(r"([-+]?[0-9]*\.?[0-9]+)\s*KCAL/MOL", subtext, flags=re.IGNORECASE)
                         fragment_energies.append(float(m2.group(1)))
-
+            print("energies", energies)
             result:Results = Results(energies["E_Pauli"], 
                                     energies["E_disp"], 
                                     energies["E_elstat"], 
@@ -336,7 +352,6 @@ def print_results(results: list[Results], configuration:Configuration, xyz_list:
         atom_2 = xyz_lattice.atoms[configuration.bond_length_atom_2]
         # sqrt((x2 - x1)^2 + (y2 - y1)^2 ...) - TS bond length
         distances.append(round(math.sqrt((atom_2[1] - atom_1[1])**2 + (atom_2[2] - atom_1[2])**2 + (atom_2[3] - atom_1[3])**2) - configuration.bond_length, 4))
-
 
     write_to_notebook(results, configuration, xyz_list, destination, distances)
     write_to_output(results, configuration, xyz_list, destination, distances)
@@ -419,12 +434,13 @@ xyz_list = get_xyz_list(configuration.IRC_path)
 # Build the bash scripts from the input file, config and the list of xyz_lattice frames we need to do
 bash_scripts = build_bash_scripts(data, configuration, xyz_list)
 
-# Run the scripts we constructed in ams
-frame_folders = run_bash_scripts(bash_scripts, calculation_folder)
+frame_folders = generate_folder_destinations(bash_scripts, calculation_folder)
 
-# frame_folders = [f"/scistor/tc/dtt741/BandFrags/chlorobenzene/Pd_Pyrr_4NDG/Backward/frame_{i}" for i in range(0, 40 +1)]
+if configuration.only_regenerate_results is False:
+    # Run the scripts we constructed in ams
+    run_bash_scripts(bash_scripts, calculation_folder)
 
 results = scrape_results(frame_folders)
 
-# Print the results to something so a human can view it (jupy? print? excel?)
+# Print the results to something so a human can view it (jupy? print? excel?) (all of them.)
 print_results(results, configuration, xyz_list, calculation_folder)
